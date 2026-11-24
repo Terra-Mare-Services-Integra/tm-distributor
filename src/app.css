@@ -149,6 +149,8 @@ button.peligro:hover{ background:#FBEAEA; }
 select.estado{ font-size:12px; min-height:28px; padding:2px 6px; font-weight:500; }
 select.estado.ok{ color:#1E7A5B; border-color:#1E7A5B; }
 select.estado.alerta{ color:#C97A16; border-color:#C97A16; }
+select.estado.parcial{ color:var(--tm-blue); border-color:var(--tm-blue); }
+.chip.parcial{ border-color:var(--tm-blue); color:var(--tm-blue); }
 select.estado.auto{ color:var(--text-muted); }
 td.acciones{ white-space:nowrap; }
 td.acciones a.boton-chico{ text-decoration:none; margin-right:4px; }

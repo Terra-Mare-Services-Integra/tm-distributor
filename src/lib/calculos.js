@@ -10,8 +10,8 @@ export const ETAPAS = [
 
 export const TIPOS_MOV = {
   giro: 'Giro a Magrausa',
-  pago: 'Pago de Magrausa',
-  pago_directo: 'Pago directo de TM',
+  pago: 'Pago de Magrausa (Uruguay)',
+  pago_directo: 'Pago directo de TM (Argentina)',
   ajuste: 'Ajuste de saldo',
 };
 
@@ -20,11 +20,18 @@ const n = (x) => (x == null || x === '' ? 0 : Number(x));
 
 export const ESTADOS_PAGO = {
   pagado: ['Pagado', 'ok'],
+  parcial: ['Pago parcial', 'parcial'],
   pendiente: ['Pendiente', ''],
   a_confirmar: ['A confirmar', 'alerta'],
 };
 
 /** Efecto de un movimiento sobre el saldo a favor de TM en Magrausa. */
+export const PAISES_PAGO = {
+  uruguay: 'Uruguay',
+  argentina: 'Argentina',
+  ambos: 'Ambos',
+};
+
 export function efectoMagrausa(m) {
   if (m.tipo === 'giro') return n(m.monto);
   if (m.tipo === 'pago') return -n(m.monto);
@@ -63,9 +70,13 @@ export function cifrasItem(item, facturas, movimientos) {
   const esperado = item.incluir ? Math.max(incluido, facturado) : facturado;
   const pendiente = item.estado_pago === 'pagado' ? 0 : r2(Math.max(esperado - pagado, 0));
   const desvio = cotizado != null && facturado > 0 ? r2(facturado - cotizado) : null;
-  const automatico = pendiente > 0 ? 'pendiente' : pagado > 0 ? 'pagado' : null;
+  const automatico = pendiente > 0 ? (pagado > 0 ? 'parcial' : 'pendiente') : pagado > 0 ? 'pagado' : null;
   const estado = item.estado_pago ?? automatico;
-  return { cotizado, incluido, facturado, pagado, pendiente, desvio, esperado: r2(esperado), estado, automatico };
+  const pagos = movimientos.filter((m) => m.item_id === item.id && n(m.monto) > 0);
+  const enUy = pagos.some((m) => m.tipo === 'pago'), enAr = pagos.some((m) => m.tipo === 'pago_directo');
+  const paisAuto = enUy && enAr ? 'ambos' : enUy ? 'uruguay' : enAr ? 'argentina' : null;
+  const pais = item.pagado_en ?? paisAuto;
+  return { cotizado, incluido, facturado, pagado, pendiente, desvio, esperado: r2(esperado), estado, automatico, pais, paisAuto };
 }
 
 export function totales(filas) {

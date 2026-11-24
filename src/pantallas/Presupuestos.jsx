@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase.js';
-import { filasItems, totales, ETAPAS, ESTADOS_PAGO } from '../lib/calculos.js';
+import { filasItems, totales, ETAPAS, ESTADOS_PAGO, PAISES_PAGO } from '../lib/calculos.js';
 import { usd, aNumero } from '../lib/formato.js';
 
 export default function Presupuestos({ ctx }) {
@@ -54,7 +54,7 @@ export default function Presupuestos({ ctx }) {
               <table className="tabla">
                 <thead><tr>
                   <th>N°</th><th>Rubro</th><th>Proveedor</th><th>Tipo</th><th title="Entra en el total">Incluir</th>
-                  <th className="num">Cotizado</th><th className="num">Facturado</th><th className="num">Pagado</th><th className="num">Pendiente</th><th>Estado</th><th>Pago estimado</th>{editor && <th></th>}
+                  <th className="num">Cotizado</th><th className="num">Facturado</th><th className="num">Pagado</th><th className="num">Pendiente</th><th>Estado</th><th>Pagado en</th><th>Pago estimado</th>{editor && <th></th>}
                 </tr></thead>
                 <tbody>
                   {f.map(({ item, c }) => (
@@ -72,6 +72,7 @@ export default function Presupuestos({ ctx }) {
                       <td className="num">{c.pagado ? usd(c.pagado) : ''}</td>
                       <td className="num">{c.pendiente ? usd(c.pendiente) : ''}</td>
                       <td><Estado editor={editor} item={item} c={c} onCambiar={(v) => cambiar(item.id, { estado_pago: v })} /></td>
+                      <td><Pais editor={editor} item={item} c={c} onCambiar={(v) => cambiar(item.id, { pagado_en: v })} /></td>
                       <td>{editor
                         ? <input type="date" value={item.pago_estimado ?? ''} onChange={(e) => cambiar(item.id, { pago_estimado: e.target.value || null })} />
                         : item.pago_estimado ?? ''}</td>
@@ -83,7 +84,7 @@ export default function Presupuestos({ ctx }) {
                   ))}
                   <tr className="total">
                     <td></td><td colSpan={4}>Subtotal</td>
-                    <td className="num">{usd(t.incluido)}</td><td className="num">{usd(t.facturado)}</td><td className="num">{usd(t.pagado)}</td><td className="num">{usd(t.pendiente)}</td><td></td><td></td>{editor && <td></td>}
+                    <td className="num">{usd(t.incluido)}</td><td className="num">{usd(t.facturado)}</td><td className="num">{usd(t.pagado)}</td><td className="num">{usd(t.pendiente)}</td><td></td><td></td><td></td>{editor && <td></td>}
                   </tr>
                 </tbody>
               </table>
@@ -106,6 +107,18 @@ function Estado({ editor, item, c, onCambiar }) {
       title={item.estado_pago ? 'Marcado a mano' : 'Automático: según los pagos cargados en la cuenta'}>
       <option value="">Auto ({auto})</option>
       {Object.entries(ESTADOS_PAGO).map(([k, [n]]) => <option key={k} value={k}>{n}</option>)}
+    </select>
+  );
+}
+
+function Pais({ editor, item, c, onCambiar }) {
+  if (!editor) return c.pais ? <span title={item.pagado_en ? 'Marcado a mano' : 'Según los pagos cargados'}>{PAISES_PAGO[c.pais]}</span> : null;
+  const auto = c.paisAuto ? PAISES_PAGO[c.paisAuto] : '—';
+  return (
+    <select className={`estado ${item.pagado_en ? '' : 'auto'}`} value={item.pagado_en ?? ''} onChange={(e) => onCambiar(e.target.value || null)}
+      title={item.pagado_en ? 'Marcado a mano' : 'Automático: pagos de Magrausa = Uruguay, pagos directos de TM = Argentina'}>
+      <option value="">Auto ({auto})</option>
+      {Object.entries(PAISES_PAGO).map(([k, n]) => <option key={k} value={k}>{n}</option>)}
     </select>
   );
 }
