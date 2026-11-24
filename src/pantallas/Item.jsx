@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase.js';
-import { cifrasItem, totalLineas, ETAPAS, TIPOS_MOV } from '../lib/calculos.js';
+import { cifrasItem, totalLineas, ETAPAS, TIPOS_MOV, ESTADOS_PAGO } from '../lib/calculos.js';
 import { usd, usd2, fecha, aNumero } from '../lib/formato.js';
 import { ListaArchivos, SubirArchivo } from '../componentes/Archivos.jsx';
 
@@ -95,7 +95,7 @@ function Datos({ ctx, item }) {
   const inicial = {
     rubro: item.rubro, proveedor: item.proveedor, etapa: item.etapa, hito: item.hito ?? '', tipo: item.tipo,
     monto: item.monto_cotizado ?? '', formula: item.formula, cotizado_el: item.cotizado_el ?? '',
-    pago_estimado: item.pago_estimado ?? '', observaciones: item.observaciones,
+    pago_estimado: item.pago_estimado ?? '', estado_pago: item.estado_pago ?? '', observaciones: item.observaciones,
   };
   const [f, setF] = useState(inicial);
   const [aviso, setAviso] = useState(null);
@@ -106,7 +106,7 @@ function Datos({ ctx, item }) {
     e.preventDefault();
     const { error } = await supabase.from('dist_items').update({
       rubro: f.rubro.trim(), proveedor: f.proveedor.trim(), etapa: f.etapa, hito: f.hito === '' ? null : Number(f.hito), tipo: f.tipo,
-      monto_cotizado: aNumero(f.monto), formula: f.formula, cotizado_el: f.cotizado_el || null, pago_estimado: f.pago_estimado || null,
+      monto_cotizado: aNumero(f.monto), formula: f.formula, cotizado_el: f.cotizado_el || null, pago_estimado: f.pago_estimado || null, estado_pago: f.estado_pago || null,
       observaciones: f.observaciones,
     }).eq('id', item.id);
     if (error) setAviso({ error: true, texto: error.message });
@@ -127,6 +127,8 @@ function Datos({ ctx, item }) {
           <label>Cómo se calcula<input value={f.formula} onChange={set('formula')} placeholder="opcional" /></label>
           <label>Fecha de cotización<input type="date" value={f.cotizado_el} onChange={set('cotizado_el')} /></label>
           <label>Pago estimado<input type="date" value={f.pago_estimado} onChange={set('pago_estimado')} /></label>
+          <label>Estado de pago<select value={f.estado_pago} onChange={set('estado_pago')}><option value="">Automático (según pagos)</option>
+            {Object.entries(ESTADOS_PAGO).map(([k, [n]]) => <option key={k} value={k}>{n}</option>)}</select></label>
         </div>
         <label className="ancho">Observaciones<textarea rows={2} value={f.observaciones} onChange={set('observaciones')} /></label>
       </fieldset>

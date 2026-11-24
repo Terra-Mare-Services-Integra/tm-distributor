@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase.js';
-import { filasItems, totales, ETAPAS } from '../lib/calculos.js';
+import { filasItems, totales, ETAPAS, ESTADOS_PAGO } from '../lib/calculos.js';
 import { usd, aNumero } from '../lib/formato.js';
 
 export default function Presupuestos({ ctx }) {
@@ -18,6 +18,14 @@ export default function Presupuestos({ ctx }) {
   async function cambiar(id, campos) {
     const { error } = await supabase.from('dist_items').update(campos).eq('id', id);
     if (error) alert(error.message); else recargar('items');
+  }
+
+  async function borrar(item) {
+    const asociados = datos.facturas.some((f) => f.item_id === item.id) || datos.movimientos.some((m) => m.item_id === item.id);
+    if (asociados) { alert(`"${item.rubro}" tiene facturas o pagos asociados: primero desvinculalos.`); return; }
+    if (!confirm(`¿Borrar "${item.rubro}" y su detalle? No se puede deshacer.`)) return;
+    const { error } = await supabase.from('dist_items').delete().eq('id', item.id);
+    if (error) alert(error.message); else recargar('items', 'lineas');
   }
 
   return (
@@ -46,7 +54,7 @@ export default function Presupuestos({ ctx }) {
               <table className="tabla">
                 <thead><tr>
                   <th>N°</th><th>Rubro</th><th>Proveedor</th><th>Tipo</th><th title="Entra en el total">Incluir</th>
-                  <th className="num">Cotizado</th><th className="num">Facturado</th><th className="num">Pagado</th><th className="num">Pendiente</th><th>Pago estimado</th>
+                  <th className="num">Cotizado</th><th className="num">Facturado</th><th className="num">Pagado</th><th className="num">Pendiente</th><th>Estado</th><th>Pago estimado</th>{editor && <th></th>}
                 </tr></thead>
                 <tbody>
                   {f.map(({ item, c }) => (
@@ -62,15 +70,20 @@ export default function Presupuestos({ ctx }) {
                       <td className="num">{usd(c.cotizado)}</td>
                       <td className={`num${c.desvio > 0 ? ' rojo' : ''}`} title={c.desvio ? `Desvío ${usd(c.desvio)}` : ''}>{c.facturado ? usd(c.facturado) : ''}</td>
                       <td className="num">{c.pagado ? usd(c.pagado) : ''}</td>
-                      <td className="num">{c.pendiente ? usd(c.pendiente) : c.pagado ? <span className="chip ok">Pagado</span> : ''}</td>
+                      <td className="num">{c.pendiente ? usd(c.pendiente) : ''}</td>
+                      <td><Estado editor={editor} item={item} c={c} onCambiar={(v) => cambiar(item.id, { estado_pago: v })} /></td>
                       <td>{editor
                         ? <input type="date" value={item.pago_estimado ?? ''} onChange={(e) => cambiar(item.id, { pago_estimado: e.target.value || null })} />
                         : item.pago_estimado ?? ''}</td>
+                      {editor && <td className="acciones">
+                        <a className="boton-chico" href={`#/item/${item.id}`} title="Cambiar rubro, proveedor, monto, hito…">Editar</a>
+                        <button className="terciario chico peligro" title="Borrar este ítem" onClick={() => borrar(item)}>Borrar</button>
+                      </td>}
                     </tr>
                   ))}
                   <tr className="total">
                     <td></td><td colSpan={4}>Subtotal</td>
-                    <td className="num">{usd(t.incluido)}</td><td className="num">{usd(t.facturado)}</td><td className="num">{usd(t.pagado)}</td><td className="num">{usd(t.pendiente)}</td><td></td>
+                    <td className="num">{usd(t.incluido)}</td><td className="num">{usd(t.facturado)}</td><td className="num">{usd(t.pagado)}</td><td className="num">{usd(t.pendiente)}</td><td></td><td></td>{editor && <td></td>}
                   </tr>
                 </tbody>
               </table>
@@ -81,6 +94,19 @@ export default function Presupuestos({ ctx }) {
 
       {editor && <NuevoItem ctx={ctx} etapa={etapa} />}
     </>
+  );
+}
+
+function Estado({ editor, item, c, onCambiar }) {
+  const [nombre, clase] = ESTADOS_PAGO[c.estado] ?? ['—', ''];
+  if (!editor) return c.estado ? <span className={`chip ${clase}`} title={item.estado_pago ? 'Marcado a mano' : 'Según los pagos cargados'}>{nombre}</span> : null;
+  const auto = c.automatico ? ESTADOS_PAGO[c.automatico][0] : 'sin pagos';
+  return (
+    <select className={`estado ${item.estado_pago ? clase : 'auto'}`} value={item.estado_pago ?? ''} onChange={(e) => onCambiar(e.target.value || null)}
+      title={item.estado_pago ? 'Marcado a mano' : 'Automático: según los pagos cargados en la cuenta'}>
+      <option value="">Auto ({auto})</option>
+      {Object.entries(ESTADOS_PAGO).map(([k, [n]]) => <option key={k} value={k}>{n}</option>)}
+    </select>
   );
 }
 

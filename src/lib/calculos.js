@@ -18,6 +18,12 @@ export const TIPOS_MOV = {
 const r2 = (x) => Math.round((x + Number.EPSILON) * 100) / 100;
 const n = (x) => (x == null || x === '' ? 0 : Number(x));
 
+export const ESTADOS_PAGO = {
+  pagado: ['Pagado', 'ok'],
+  pendiente: ['Pendiente', ''],
+  a_confirmar: ['A confirmar', 'alerta'],
+};
+
 /** Efecto de un movimiento sobre el saldo a favor de TM en Magrausa. */
 export function efectoMagrausa(m) {
   if (m.tipo === 'giro') return n(m.monto);
@@ -55,9 +61,11 @@ export function cifrasItem(item, facturas, movimientos) {
   const facturado = r2(facturas.filter((f) => f.item_id === item.id && f.moneda === 'USD').reduce((s, f) => s + n(f.total), 0));
   const pagado = r2(movimientos.filter((m) => m.item_id === item.id && (m.tipo === 'pago' || m.tipo === 'pago_directo')).reduce((s, m) => s + n(m.monto), 0));
   const esperado = item.incluir ? Math.max(incluido, facturado) : facturado;
-  const pendiente = r2(Math.max(esperado - pagado, 0));
+  const pendiente = item.estado_pago === 'pagado' ? 0 : r2(Math.max(esperado - pagado, 0));
   const desvio = cotizado != null && facturado > 0 ? r2(facturado - cotizado) : null;
-  return { cotizado, incluido, facturado, pagado, pendiente, desvio, esperado: r2(esperado) };
+  const automatico = pendiente > 0 ? 'pendiente' : pagado > 0 ? 'pagado' : null;
+  const estado = item.estado_pago ?? automatico;
+  return { cotizado, incluido, facturado, pagado, pendiente, desvio, esperado: r2(esperado), estado, automatico };
 }
 
 export function totales(filas) {
