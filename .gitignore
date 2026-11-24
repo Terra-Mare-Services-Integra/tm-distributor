@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.vercel
+
+# Valores reales del proyecto (seed generado desde los Excel, archivos de Magrausa)
+datos-locales/
+supabase/.temp/
