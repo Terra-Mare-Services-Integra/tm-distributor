@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js';
 import { cifrasItem, totalLineas, ETAPAS, TIPOS_MOV, ESTADOS_PAGO, PAISES_PAGO } from '../lib/calculos.js';
 import { usd, usd2, fecha, aNumero } from '../lib/formato.js';
 import { ListaArchivos, SubirArchivo } from '../componentes/Archivos.jsx';
+import { SelectorHito } from '../componentes/Hitos.jsx';
 
 export default function Item({ ctx, id }) {
   const { datos, editor, recargar } = ctx;
@@ -120,8 +121,7 @@ function Datos({ ctx, item }) {
           <label>Rubro<input required value={f.rubro} onChange={set('rubro')} /></label>
           <label>Proveedor<input value={f.proveedor} onChange={set('proveedor')} /></label>
           <label>Etapa<select value={f.etapa} onChange={set('etapa')}>{ETAPAS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
-          <label>Hito<select value={f.hito} onChange={set('hito')}><option value="">Sin hito</option>
-            {datos.hitos.map((h) => <option key={h.n} value={h.n}>{h.n}. {h.nombre}</option>)}</select></label>
+          <label>Hito<SelectorHito ctx={ctx} value={f.hito} onChange={(v) => { setF((x) => ({ ...x, hito: v })); setAviso(null); }} /></label>
           <label>Tipo<select value={f.tipo} onChange={set('tipo')}><option value="base">Base</option><option value="opcional">Opcional</option></select></label>
           <label>Monto cotizado (USD)<input inputMode="decimal" value={f.monto} onChange={set('monto')} /></label>
           <label>Cómo se calcula<input value={f.formula} onChange={set('formula')} placeholder="opcional" /></label>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { filasItems, totales, ETAPAS, ESTADOS_PAGO, PAISES_PAGO } from '../lib/calculos.js';
 import { usd, aNumero } from '../lib/formato.js';
+import { SelectorHito, NuevoHito } from '../componentes/Hitos.jsx';
 
 export default function Presupuestos({ ctx }) {
   const { datos, editor, recargar } = ctx;
@@ -11,7 +12,7 @@ export default function Presupuestos({ ctx }) {
 
   const filas = filasItems(datos, (i) => i.etapa === etapa && (verOpcionales || i.tipo === 'base'));
   const grupos = etapa === 'acondicionamiento'
-    ? [...datos.hitos.map((h) => ({ clave: h.n, titulo: `Hito ${h.n} · ${h.nombre}`, sub: `Tareas ${h.tareas} del Anexo I` })), { clave: null, titulo: 'Sin hito' }]
+    ? [...datos.hitos.map((h) => ({ clave: h.n, titulo: `Hito ${h.n} · ${h.nombre}`, sub: h.tareas ? `Tareas ${h.tareas} del Anexo I` : null })), { clave: null, titulo: 'Sin hito' }]
     : [{ clave: 'todos', titulo: null }];
   const del = (g) => filas.filter(({ item }) => g.clave === 'todos' || (item.hito ?? null) === g.clave);
 
@@ -45,7 +46,13 @@ export default function Presupuestos({ ctx }) {
 
       {grupos.map((g) => {
         const f = del(g);
-        if (!f.length) return null;
+        if (!f.length && !(editor && typeof g.clave === 'number')) return null;
+        if (!f.length) return (
+          <section key={String(g.clave)}>
+            <h3>{g.titulo} {g.sub && <span className="ayuda">· {g.sub}</span>}</h3>
+            <p className="aviso">Sin ítems todavía. Asignale ítems desde “Editar” o creá uno nuevo.</p>
+          </section>
+        );
         const t = totales(f);
         return (
           <section key={String(g.clave)}>
@@ -94,6 +101,7 @@ export default function Presupuestos({ ctx }) {
       })}
 
       {editor && <NuevoItem ctx={ctx} etapa={etapa} />}
+      {editor && etapa === 'acondicionamiento' && <div className="fila-botones"><NuevoHito ctx={ctx} /></div>}
     </>
   );
 }
@@ -146,8 +154,7 @@ function NuevoItem({ ctx, etapa }) {
       <div className="rejilla">
         <label>Rubro<input required value={f.rubro} onChange={set('rubro')} /></label>
         <label>Proveedor<input value={f.proveedor} onChange={set('proveedor')} /></label>
-        {etapa === 'acondicionamiento' && <label>Hito<select value={f.hito} onChange={set('hito')}>
-          <option value="">Sin hito</option>{ctx.datos.hitos.map((h) => <option key={h.n} value={h.n}>{h.n}. {h.nombre}</option>)}</select></label>}
+        {etapa === 'acondicionamiento' && <label>Hito<SelectorHito ctx={ctx} value={f.hito} onChange={(v) => setF((x) => ({ ...x, hito: v }))} /></label>}
         <label>Tipo<select value={f.tipo} onChange={set('tipo')}><option value="base">Base</option><option value="opcional">Opcional</option></select></label>
         <label>Monto cotizado (USD)<input inputMode="decimal" value={f.monto} onChange={set('monto')} /></label>
         <label>Fecha de cotización<input type="date" value={f.cotizado_el} onChange={set('cotizado_el')} /></label>
