@@ -179,3 +179,7 @@ td.acciones a.boton-chico{ text-decoration:none; margin-right:4px; }
   .usuario-mail{ display:none; }
   .kpi-valor{ font-size:18px; }
 }
+
+.adjuntos{ display:flex; gap:4px; align-items:center; flex-wrap:nowrap; white-space:nowrap; }
+.adjuntos .clip{ background:none; border:0; padding:0 2px; cursor:pointer; font-size:15px; }
+.adjuntos .boton-chico{ padding:0 6px; }

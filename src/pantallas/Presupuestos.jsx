@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js';
 import { filasItems, totales, ETAPAS, ESTADOS_PAGO, PAISES_PAGO } from '../lib/calculos.js';
 import { usd, aNumero } from '../lib/formato.js';
 import { SelectorHito, NuevoHito } from '../componentes/Hitos.jsx';
+import { abrirArchivo, SubirArchivo } from '../componentes/Archivos.jsx';
 
 export default function Presupuestos({ ctx }) {
   const { datos, editor, recargar } = ctx;
@@ -61,7 +62,7 @@ export default function Presupuestos({ ctx }) {
               <table className="tabla">
                 <thead><tr>
                   <th>N°</th><th>Rubro</th><th>Proveedor</th><th>Tipo</th><th title="Entra en el total">Incluir</th>
-                  <th className="num">Cotizado</th><th className="num">Facturado</th><th className="num">Pagado</th><th className="num">Pendiente</th><th>Estado</th><th>Pagado en</th><th>Pago estimado</th>{editor && <th></th>}
+                  <th className="num">Cotizado</th><th className="num">Facturado</th><th className="num">Pagado</th><th className="num">Pendiente</th><th title="Facturas y comprobantes adjuntos">Adjuntos</th><th>Estado</th><th>Pagado en</th><th>Pago estimado</th>{editor && <th></th>}
                 </tr></thead>
                 <tbody>
                   {f.map(({ item, c }) => (
@@ -78,6 +79,7 @@ export default function Presupuestos({ ctx }) {
                       <td className={`num${c.desvio > 0 ? ' rojo' : ''}`} title={c.desvio ? `Desvío ${usd(c.desvio)}` : ''}>{c.facturado ? usd(c.facturado) : ''}</td>
                       <td className="num">{c.pagado ? usd(c.pagado) : ''}</td>
                       <td className="num">{c.pendiente ? usd(c.pendiente) : ''}</td>
+                      <td><Adjuntos ctx={ctx} item={item} c={c} /></td>
                       <td><Estado editor={editor} item={item} c={c} onCambiar={(v) => cambiar(item.id, { estado_pago: v })} /></td>
                       <td><Pais editor={editor} item={item} c={c} onCambiar={(v) => cambiar(item.id, { pagado_en: v })} /></td>
                       <td>{editor
@@ -91,7 +93,7 @@ export default function Presupuestos({ ctx }) {
                   ))}
                   <tr className="total">
                     <td></td><td colSpan={4}>Subtotal</td>
-                    <td className="num">{usd(t.incluido)}</td><td className="num">{usd(t.facturado)}</td><td className="num">{usd(t.pagado)}</td><td className="num">{usd(t.pendiente)}</td><td></td><td></td><td></td>{editor && <td></td>}
+                    <td className="num">{usd(t.incluido)}</td><td className="num">{usd(t.facturado)}</td><td className="num">{usd(t.pagado)}</td><td className="num">{usd(t.pendiente)}</td><td></td><td></td><td></td><td></td>{editor && <td></td>}
                   </tr>
                 </tbody>
               </table>
@@ -103,6 +105,26 @@ export default function Presupuestos({ ctx }) {
       {editor && <NuevoItem ctx={ctx} etapa={etapa} />}
       {editor && etapa === 'acondicionamiento' && <div className="fila-botones"><NuevoHito ctx={ctx} /></div>}
     </>
+  );
+}
+
+/** Archivos del ítem (propios, de sus facturas o de sus pagos). Si hay pagos o facturas y ningún adjunto, avisa que falta. */
+function Adjuntos({ ctx, item, c }) {
+  const { datos } = ctx;
+  const facs = datos.facturas.filter((f) => f.item_id === item.id);
+  const pagos = datos.movimientos.filter((m) => m.item_id === item.id);
+  const docs = datos.documentos.filter((d) => d.item_id === item.id || facs.some((f) => f.id === d.factura_id) || pagos.some((p) => p.id === d.movimiento_id));
+  const falta = !docs.some((d) => d.tipo === 'factura') && (pagos.length > 0 || facs.length > 0 || c.estado === 'pagado');
+  return (
+    <div className="adjuntos">
+      {docs.map((d) => (
+        <button key={d.id} className="clip" title={`${d.nombre}${d.tipo === 'factura' ? ' (factura)' : ''}`} onClick={() => abrirArchivo(d.ruta)}>
+          📎{d.tipo === 'factura' ? '' : <span className="ayuda"> {d.tipo === 'comprobante' ? 'comp.' : d.tipo.slice(0, 5)}</span>}
+        </button>
+      ))}
+      {falta && <span className="chip critico" title="Hay pagos o facturas cargados pero no está adjunta la factura">Falta factura</span>}
+      <SubirArchivo ctx={ctx} vinculos={{ item_id: item.id, tipo: 'factura' }} texto="+" />
+    </div>
   );
 }
 
