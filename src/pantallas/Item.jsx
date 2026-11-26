@@ -95,7 +95,7 @@ function Datos({ ctx, item }) {
   const { datos, editor, recargar } = ctx;
   const inicial = {
     rubro: item.rubro, proveedor: item.proveedor, etapa: item.etapa, hito: item.hito ?? '', tipo: item.tipo,
-    monto: item.monto_cotizado ?? '', formula: item.formula, cotizado_el: item.cotizado_el ?? '',
+    incluir: item.incluir, monto: item.monto_cotizado ?? '', formula: item.formula, cotizado_el: item.cotizado_el ?? '',
     pago_estimado: item.pago_estimado ?? '', estado_pago: item.estado_pago ?? '', pagado_en: item.pagado_en ?? '', observaciones: item.observaciones,
   };
   const [f, setF] = useState(inicial);
@@ -106,7 +106,7 @@ function Datos({ ctx, item }) {
   async function guardar(e) {
     e.preventDefault();
     const { error } = await supabase.from('dist_items').update({
-      rubro: f.rubro.trim(), proveedor: f.proveedor.trim(), etapa: f.etapa, hito: f.hito === '' ? null : Number(f.hito), tipo: f.tipo,
+      rubro: f.rubro.trim(), proveedor: f.proveedor.trim(), etapa: f.etapa, hito: f.hito === '' ? null : Number(f.hito), tipo: f.tipo, incluir: f.incluir,
       monto_cotizado: aNumero(f.monto), formula: f.formula, cotizado_el: f.cotizado_el || null, pago_estimado: f.pago_estimado || null, estado_pago: f.estado_pago || null, pagado_en: f.pagado_en || null,
       observaciones: f.observaciones,
     }).eq('id', item.id);
@@ -124,6 +124,7 @@ function Datos({ ctx, item }) {
           <label>Hito<SelectorHito ctx={ctx} value={f.hito} onChange={(v) => { setF((x) => ({ ...x, hito: v })); setAviso(null); }} /></label>
           <label>Tipo<select value={f.tipo} onChange={set('tipo')}><option value="base">Base</option><option value="opcional">Opcional</option></select></label>
           <label>Monto cotizado (USD)<input inputMode="decimal" value={f.monto} onChange={set('monto')} /></label>
+          <label className="casilla"><input type="checkbox" checked={f.incluir} onChange={(e) => { setF({ ...f, incluir: e.target.checked }); setAviso(null); }} /> Entra en el total</label>
           <label>Cómo se calcula<input value={f.formula} onChange={set('formula')} placeholder="opcional" /></label>
           <label>Fecha de cotización<input type="date" value={f.cotizado_el} onChange={set('cotizado_el')} /></label>
           <label>Pago estimado<input type="date" value={f.pago_estimado} onChange={set('pago_estimado')} /></label>

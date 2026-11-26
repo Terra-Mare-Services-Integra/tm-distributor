@@ -3,10 +3,10 @@ import { supabase } from '../lib/supabase.js';
 import { filasItems, totales, ETAPAS, ESTADOS_PAGO, PAISES_PAGO } from '../lib/calculos.js';
 import { usd, aNumero } from '../lib/formato.js';
 import { SelectorHito, NuevoHito } from '../componentes/Hitos.jsx';
-import { abrirArchivo, SubirArchivo } from '../componentes/Archivos.jsx';
+import { abrirArchivo } from '../componentes/Archivos.jsx';
 
 export default function Presupuestos({ ctx }) {
-  const { datos, editor, recargar } = ctx;
+  const { datos, editor } = ctx;
   const [etapa, setEtapa] = useState(() => sessionStorage.getItem('dist-etapa') ?? 'acondicionamiento');
   const [verOpcionales, setVerOpcionales] = useState(true);
   const elegir = (e) => { setEtapa(e); try { sessionStorage.setItem('dist-etapa', e); } catch { /* sin storage */ } };
@@ -16,19 +16,6 @@ export default function Presupuestos({ ctx }) {
     ? [...datos.hitos.map((h) => ({ clave: h.n, titulo: `Hito ${h.n} · ${h.nombre}`, sub: h.tareas ? `Tareas ${h.tareas} del Anexo I` : null })), { clave: null, titulo: 'Sin hito' }]
     : [{ clave: 'todos', titulo: null }];
   const del = (g) => filas.filter(({ item }) => g.clave === 'todos' || (item.hito ?? null) === g.clave);
-
-  async function cambiar(id, campos) {
-    const { error } = await supabase.from('dist_items').update(campos).eq('id', id);
-    if (error) alert(error.message); else recargar('items');
-  }
-
-  async function borrar(item) {
-    const asociados = datos.facturas.some((f) => f.item_id === item.id) || datos.movimientos.some((m) => m.item_id === item.id);
-    if (asociados) { alert(`"${item.rubro}" tiene facturas o pagos asociados: primero desvinculalos.`); return; }
-    if (!confirm(`¿Borrar "${item.rubro}" y su detalle? No se puede deshacer.`)) return;
-    const { error } = await supabase.from('dist_items').delete().eq('id', item.id);
-    if (error) alert(error.message); else recargar('items', 'lineas');
-  }
 
   return (
     <>
@@ -47,53 +34,44 @@ export default function Presupuestos({ ctx }) {
 
       {grupos.map((g) => {
         const f = del(g);
-        if (!f.length && !(editor && typeof g.clave === 'number')) return null;
-        if (!f.length) return (
-          <section key={String(g.clave)}>
-            <h3>{g.titulo} {g.sub && <span className="ayuda">· {g.sub}</span>}</h3>
-            <p className="aviso">Sin ítems todavía. Asignale ítems desde “Editar” o creá uno nuevo.</p>
-          </section>
-        );
+        if (!f.length) return null;
         const t = totales(f);
         return (
           <section key={String(g.clave)}>
             {g.titulo && <h3>{g.titulo} {g.sub && <span className="ayuda">· {g.sub}</span>}</h3>}
             <div className="tabla-scroll">
-              <table className="tabla">
+              <table className="tabla presupuesto">
+                <colgroup>
+                  <col className="c-n" /><col /><col className="c-monto" /><col className="c-monto" /><col className="c-monto" /><col className="c-monto" />
+                  <col className="c-estado" /><col className="c-pais" /><col className="c-docs" />
+                </colgroup>
                 <thead><tr>
-                  <th>N°</th><th>Rubro</th><th>Proveedor</th><th>Tipo</th><th title="Entra en el total">Incluir</th>
-                  <th className="num">Cotizado</th><th className="num">Facturado</th><th className="num">Pagado</th><th className="num">Pendiente</th><th title="Facturas y comprobantes adjuntos">Adjuntos</th><th>Estado</th><th>Pagado en</th><th>Pago estimado</th>{editor && <th></th>}
+                  <th className="num">N°</th><th>Rubro · proveedor</th>
+                  <th className="num">Cotizado</th><th className="num">Facturado</th><th className="num">Pagado</th><th className="num">Pendiente</th>
+                  <th>Estado</th><th>Pagado en</th><th>Factura</th>
                 </tr></thead>
                 <tbody>
                   {f.map(({ item, c }) => (
-                    <tr key={item.id} className={item.incluir ? '' : 'apagada'}>
-                      <td className="mono">{item.n ?? ''}</td>
-                      <td><a href={`#/item/${item.id}`}>{item.rubro}</a>{item.observaciones && <div className="ayuda una-linea" title={item.observaciones}>{item.observaciones}</div>}</td>
-                      <td>{item.proveedor || <span className="ayuda">—</span>}</td>
-                      <td>{editor
-                        ? <select value={item.tipo} onChange={(e) => cambiar(item.id, { tipo: e.target.value, incluir: e.target.value === 'base' ? item.incluir : false })}>
-                            <option value="base">Base</option><option value="opcional">Opcional</option></select>
-                        : item.tipo === 'base' ? 'Base' : 'Opcional'}</td>
-                      <td className="centro"><input type="checkbox" checked={item.incluir} disabled={!editor} onChange={(e) => cambiar(item.id, { incluir: e.target.checked })} /></td>
+                    <tr key={item.id} className={`fila-link${item.incluir ? '' : ' apagada'}`} onClick={(e) => { if (!e.target.closest('button, a')) window.location.hash = `#/item/${item.id}`; }}>
+                      <td className="num">{item.n ?? ''}</td>
+                      <td>
+                        <a href={`#/item/${item.id}`}>{item.rubro}</a>
+                        {item.tipo === 'opcional' && <span className="etiqueta-op">Opcional</span>}
+                        {!item.incluir && item.tipo === 'base' && <span className="etiqueta-op">Fuera del total</span>}
+                        <div className="ayuda una-linea" title={item.observaciones || undefined}>{[item.proveedor, item.observaciones].filter(Boolean).join(' · ') || '\u00a0'}</div>
+                      </td>
                       <td className="num">{usd(c.cotizado)}</td>
-                      <td className={`num${c.desvio > 0 ? ' rojo' : ''}`} title={c.desvio ? `Desvío ${usd(c.desvio)}` : ''}>{c.facturado ? usd(c.facturado) : ''}</td>
-                      <td className="num">{c.pagado ? usd(c.pagado) : ''}</td>
-                      <td className="num">{c.pendiente ? usd(c.pendiente) : ''}</td>
+                      <td className={`num${c.desvio > 0 ? ' rojo' : ''}`} title={c.desvio ? `Desvío ${usd(c.desvio)}` : ''}>{c.facturado ? usd(c.facturado) : '—'}</td>
+                      <td className="num">{c.pagado ? usd(c.pagado) : '—'}</td>
+                      <td className="num fuerte">{c.pendiente ? usd(c.pendiente) : '—'}</td>
+                      <td>{c.estado ? <span className={`chip ${ESTADOS_PAGO[c.estado]?.[1] ?? ''}`}>{ESTADOS_PAGO[c.estado]?.[0]}</span> : ''}</td>
+                      <td>{c.pais ? PAISES_PAGO[c.pais] : ''}</td>
                       <td><Adjuntos ctx={ctx} item={item} c={c} /></td>
-                      <td><Estado editor={editor} item={item} c={c} onCambiar={(v) => cambiar(item.id, { estado_pago: v })} /></td>
-                      <td><Pais editor={editor} item={item} c={c} onCambiar={(v) => cambiar(item.id, { pagado_en: v })} /></td>
-                      <td>{editor
-                        ? <input type="date" value={item.pago_estimado ?? ''} onChange={(e) => cambiar(item.id, { pago_estimado: e.target.value || null })} />
-                        : item.pago_estimado ?? ''}</td>
-                      {editor && <td className="acciones">
-                        <a className="boton-chico" href={`#/item/${item.id}`} title="Cambiar rubro, proveedor, monto, hito…">Editar</a>
-                        <button className="terciario chico peligro" title="Borrar este ítem" onClick={() => borrar(item)}>Borrar</button>
-                      </td>}
                     </tr>
                   ))}
                   <tr className="total">
-                    <td></td><td colSpan={4}>Subtotal</td>
-                    <td className="num">{usd(t.incluido)}</td><td className="num">{usd(t.facturado)}</td><td className="num">{usd(t.pagado)}</td><td className="num">{usd(t.pendiente)}</td><td></td><td></td><td></td><td></td>{editor && <td></td>}
+                    <td></td><td>Subtotal</td>
+                    <td className="num">{usd(t.incluido)}</td><td className="num">{usd(t.facturado)}</td><td className="num">{usd(t.pagado)}</td><td className="num">{usd(t.pendiente)}</td><td></td><td></td><td></td>
                   </tr>
                 </tbody>
               </table>
@@ -108,48 +86,22 @@ export default function Presupuestos({ ctx }) {
   );
 }
 
-/** Archivos del ítem (propios, de sus facturas o de sus pagos). Si hay pagos o facturas y ningún adjunto, avisa que falta. */
+/** Factura del ítem (abre el PDF); el resto de los archivos se ven en el ítem. Avisa si hay pagos sin factura. */
 function Adjuntos({ ctx, item, c }) {
   const { datos } = ctx;
   const facs = datos.facturas.filter((f) => f.item_id === item.id);
   const pagos = datos.movimientos.filter((m) => m.item_id === item.id);
   const docs = datos.documentos.filter((d) => d.item_id === item.id || facs.some((f) => f.id === d.factura_id) || pagos.some((p) => p.id === d.movimiento_id));
-  const falta = !docs.some((d) => d.tipo === 'factura') && (pagos.length > 0 || facs.length > 0 || c.estado === 'pagado');
+  const facturas = docs.filter((d) => d.tipo === 'factura');
+  const otros = docs.length - facturas.length;
+  const falta = !facturas.length && (pagos.length > 0 || facs.length > 0 || c.estado === 'pagado');
+  const parcial = falta && c.estado === 'parcial';
   return (
     <div className="adjuntos">
-      {docs.map((d) => (
-        <button key={d.id} className="clip" title={`${d.nombre}${d.tipo === 'factura' ? ' (factura)' : ''}`} onClick={() => abrirArchivo(d.ruta)}>
-          📎{d.tipo === 'factura' ? '' : <span className="ayuda"> {d.tipo === 'comprobante' ? 'comp.' : d.tipo.slice(0, 5)}</span>}
-        </button>
-      ))}
-      {falta && <span className="chip critico" title="Hay pagos o facturas cargados pero no está adjunta la factura">Falta factura</span>}
-      <SubirArchivo ctx={ctx} vinculos={{ item_id: item.id, tipo: 'factura' }} texto="+" />
+      {facturas.map((d) => <button key={d.id} className="clip" title={d.nombre} onClick={() => abrirArchivo(d.ruta)}>📄</button>)}
+      {falta && <span className={parcial ? 'falta parcial' : 'falta'} title={parcial ? 'Pago parcial: la factura puede llegar al cierre' : 'Hay pagos cargados y no está la factura'}>{parcial ? 'Al cierre' : 'Falta'}</span>}
+      {otros > 0 && <a className="otros" href={`#/item/${item.id}`} title="Comprobantes, presupuestos y certificados">+{otros}</a>}
     </div>
-  );
-}
-
-function Estado({ editor, item, c, onCambiar }) {
-  const [nombre, clase] = ESTADOS_PAGO[c.estado] ?? ['—', ''];
-  if (!editor) return c.estado ? <span className={`chip ${clase}`} title={item.estado_pago ? 'Marcado a mano' : 'Según los pagos cargados'}>{nombre}</span> : null;
-  const auto = c.automatico ? ESTADOS_PAGO[c.automatico][0] : 'sin pagos';
-  return (
-    <select className={`estado ${item.estado_pago ? clase : 'auto'}`} value={item.estado_pago ?? ''} onChange={(e) => onCambiar(e.target.value || null)}
-      title={item.estado_pago ? 'Marcado a mano' : 'Automático: según los pagos cargados en la cuenta'}>
-      <option value="">Auto ({auto})</option>
-      {Object.entries(ESTADOS_PAGO).map(([k, [n]]) => <option key={k} value={k}>{n}</option>)}
-    </select>
-  );
-}
-
-function Pais({ editor, item, c, onCambiar }) {
-  if (!editor) return c.pais ? <span title={item.pagado_en ? 'Marcado a mano' : 'Según los pagos cargados'}>{PAISES_PAGO[c.pais]}</span> : null;
-  const auto = c.paisAuto ? PAISES_PAGO[c.paisAuto] : '—';
-  return (
-    <select className={`estado ${item.pagado_en ? '' : 'auto'}`} value={item.pagado_en ?? ''} onChange={(e) => onCambiar(e.target.value || null)}
-      title={item.pagado_en ? 'Marcado a mano' : 'Automático: pagos de Magrausa = Uruguay, pagos directos de TM = Argentina'}>
-      <option value="">Auto ({auto})</option>
-      {Object.entries(PAISES_PAGO).map(([k, n]) => <option key={k} value={k}>{n}</option>)}
-    </select>
   );
 }
 

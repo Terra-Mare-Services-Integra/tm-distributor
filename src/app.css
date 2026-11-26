@@ -180,9 +180,26 @@ td.acciones a.boton-chico{ text-decoration:none; margin-right:4px; }
   .kpi-valor{ font-size:18px; }
 }
 
-.adjuntos{ display:flex; gap:4px; align-items:center; flex-wrap:nowrap; white-space:nowrap; }
-.adjuntos .clip{ background:none; border:0; padding:0 2px; cursor:pointer; font-size:15px; }
-.adjuntos .boton-chico{ padding:0 6px; }
+/* Presupuestos: tabla de lectura con columnas fijas, así todos los hitos quedan alineados */
+.tabla.presupuesto{ table-layout:fixed; width:100%; min-width:980px; }
+.tabla.presupuesto th, .tabla.presupuesto td{ padding:8px 10px; }
+.tabla.presupuesto col.c-n{ width:48px; }
+.tabla.presupuesto col.c-monto{ width:110px; }
+.tabla.presupuesto col.c-estado{ width:120px; }
+.tabla.presupuesto col.c-pais{ width:96px; }
+.tabla.presupuesto col.c-docs{ width:100px; }
+.tabla.presupuesto td a{ text-decoration:none; }
+.tabla.presupuesto td a:hover{ text-decoration:underline; }
+.tabla.presupuesto .una-linea{ max-width:none; }
+.fila-link{ cursor:pointer; }
+.fila-link:hover td{ background:var(--tm-blue-050); }
+.tabla tr.total.fila-link td{ background:var(--tm-blue-deep); }
+.etiqueta-op{ margin-left:8px; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); }
+.adjuntos{ display:flex; gap:6px; align-items:center; white-space:nowrap; font-size:12px; }
+.adjuntos .clip{ background:none; border:0; padding:0; min-height:auto; cursor:pointer; font-size:15px; line-height:1; }
+.adjuntos .falta{ color:var(--tm-critical); font-weight:600; }
+.adjuntos .falta.parcial{ color:#C97A16; }
+.adjuntos .otros{ color:var(--text-muted); }
 .informes{ display:grid; gap:12px; max-width:90ch; }
 .informe{ border:1px solid var(--tm-blue-light); padding:12px 16px; }
 .informe-cabeza{ display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
