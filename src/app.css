@@ -183,3 +183,7 @@ td.acciones a.boton-chico{ text-decoration:none; margin-right:4px; }
 .adjuntos{ display:flex; gap:4px; align-items:center; flex-wrap:nowrap; white-space:nowrap; }
 .adjuntos .clip{ background:none; border:0; padding:0 2px; cursor:pointer; font-size:15px; }
 .adjuntos .boton-chico{ padding:0 6px; }
+.informes{ display:grid; gap:12px; max-width:90ch; }
+.informe{ border:1px solid var(--tm-blue-light); padding:12px 16px; }
+.informe-cabeza{ display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
+.informe p{ margin:8px 0 0; font-size:14px; }

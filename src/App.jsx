@@ -7,6 +7,7 @@ import Facturas from './pantallas/Facturas.jsx';
 import Cuenta from './pantallas/Cuenta.jsx';
 import Cashflow from './pantallas/Cashflow.jsx';
 import Documentos from './pantallas/Documentos.jsx';
+import Informes from './pantallas/Informes.jsx';
 
 const MENU = [
   ['#/', 'Resumen'],
@@ -14,6 +15,7 @@ const MENU = [
   ['#/facturas', 'Facturas'],
   ['#/cuenta', 'Cuenta Magrausa'],
   ['#/cashflow', 'Cashflow'],
+  ['#/informes', 'Informes'],
   ['#/documentos', 'Documentos'],
 ];
 
@@ -138,6 +140,7 @@ function Distributor({ ruta }) {
       {ruta.startsWith('#/facturas') && <Facturas ctx={ctx} />}
       {ruta.startsWith('#/cuenta') && <Cuenta ctx={ctx} />}
       {ruta.startsWith('#/cashflow') && <Cashflow ctx={ctx} />}
+      {ruta.startsWith('#/informes') && <Informes ctx={ctx} />}
       {ruta.startsWith('#/documentos') && <Documentos ctx={ctx} />}
       {(ruta === '#/' || ruta === '#' || ruta === '') && <Resumen ctx={ctx} />}
     </main>

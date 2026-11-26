@@ -4,7 +4,7 @@ import { fecha } from '../lib/formato.js';
 
 export const TIPOS_DOC = {
   factura: 'Factura', comprobante: 'Comprobante de pago', estado_cuenta: 'Estado de cuenta', presupuesto: 'Presupuesto',
-  certificado: 'Certificado', contrato: 'Contrato', otro: 'Otro',
+  certificado: 'Certificado', contrato: 'Contrato', informe: 'Informe semanal', otro: 'Otro',
 };
 
 const limpiar = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.-]+/g, '_');
